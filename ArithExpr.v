@@ -8,8 +8,8 @@ Inductive bop : Set :=
 
 Definition arg := nat.
 
-Fixpoint mkArg (name : nat) : arg := name.
-Fixpoint argName (a : arg) : nat := a.
+Definition mkArg (name : nat) : arg := name.
+Definition argName (a : arg) : nat := a.
 
 Inductive aexp : Set :=
 | ArgExp : arg -> aexp
@@ -29,11 +29,11 @@ Fixpoint aEval (e : aexp) (s : arithState) : Z :=
 
 Definition stackReg := nat.
 
-Fixpoint stackRegName (sreg : stackReg) : nat := sreg.
-Fixpoint eq_stackReg (sr1 sr2 : stackReg) : bool :=
+Definition stackRegName (sreg : stackReg) : nat := sreg.
+Definition eq_stackReg (sr1 sr2 : stackReg) : bool :=
   beq_nat (stackRegName sr1) (stackRegName sr2).
 
-Fixpoint mkStackReg (n : nat) : stackReg := n.
+Definition mkStackReg (n : nat) : stackReg := n.
 
 Inductive stackBOP : Set :=
 | StackAdd : stackBOP
@@ -62,12 +62,12 @@ Check arithStateToStackRegVals.
 
 Definition stackProgram := list stackInstr.
 
-Fixpoint pushStk (r : stackReg) (ss : stackState) : stackState :=
+Definition pushStk (r : stackReg) (ss : stackState) : stackState :=
   match ss with
     | StackState srVals stk => StackState srVals ((srVals r) :: stk)
   end.
 
-Fixpoint popStk (r : stackReg) (ss : stackState) : option stackState :=
+Definition popStk (r : stackReg) (ss : stackState) : option stackState :=
   match ss with
     | StackState srVals (v :: stk) =>
       Some (StackState (fun x => if eq_stackReg x r then v else srVals x) stk)
@@ -107,8 +107,22 @@ Fixpoint arithToStackInstrs (e : aexp) : list stackInstr :=
 Fixpoint compileArithToStack (e : aexp) : stackProgram :=
   (arithToStackInstrs e) ++ (Pop sr0 :: Ret sr0 :: nil).
 
-(*Theorem compileArithToStack_correct :
-  forall (e : aexp) (ss : arithState),
-           Some (aEval e ss) = spEval (compileArithToStack e) (freshStackState ss).
-Proof.*)
-  
+Theorem pushStk_implies_not_empty :
+  forall (r : stackReg) (ss : stackState),
+    exists (srv : stackRegVals) (s : stack),
+      pushStk r ss = StackState srv ((srv r) :: s).
+Proof.
+  intros; destruct ss; repeat eapply ex_intro. cbv delta.
+  cbv beta. cbv iota. reflexivity.
+Qed.
+
+Theorem compileArithToStack_correct :
+  forall (e : aexp) (ars : arithState),
+           Some (aEval e ars) = spEval (compileArithToStack e) (freshStackState ars).
+Proof.
+  intros; induction e.
+
+  simpl. unfold arithStateToStackRegVals.
+  unfold argName. unfold mkStackReg. unfold stackRegName. reflexivity.
+
+  simpl; destruct b.
